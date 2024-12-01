@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Callable
 from copy import deepcopy
 
-from bst_tree import BSTNode, Comparable, Compare, EmptyValue, Node
+from bst_tree import BSTNode, Comparable, Compare, Node
 
 
 class AVLNode[T: Comparable](BSTNode[T]):
@@ -10,7 +10,7 @@ class AVLNode[T: Comparable](BSTNode[T]):
 
     def __init__(
         self,
-        value: T | EmptyValue = EmptyValue(),
+        value: T,
         parent: AVLNode[T] | None = None,
         predicate: Callable[[T, T], Compare] = lambda first, second: (
             Compare.Less
@@ -32,10 +32,10 @@ class AVLNode[T: Comparable](BSTNode[T]):
             if not self.right.correct():
                 return False
         return True
-    
+
     def is_balanced(self):
-        l_high = self.left._get_height() if self.left else -1
-        r_high = self.right._get_height() if self.right else -1
+        l_high = self.left._get_height() if self.left else 0
+        r_high = self.right._get_height() if self.right else 0
         if abs(l_high - r_high) > 1:
             return False
         if self.left is not None and not self.left.is_balanced():
@@ -45,23 +45,14 @@ class AVLNode[T: Comparable](BSTNode[T]):
         return True
 
     def _callback_decorator(func):
-        def wrapper(self: AVLNode, *args, **kwargs) :
+        def wrapper(self: AVLNode, *args, **kwargs):
             result = func(self, *args, **kwargs)
             self.balance()
             return result
         return wrapper
 
     def search(self, x: T) -> AVLNode | None:
-        if isinstance(self.value, EmptyValue):
-            return None
-
-        if self.predicate(self.value, x) == Compare.Equal:
-            return self
-
-        if self.predicate(self.value, x) == Compare.Greater:
-            return self.left.search(x) if self.left else None
-        else:
-            return self.right.search(x) if self.right else None
+        return super().search(x)
 
     @_callback_decorator
     def delete(self, value: T) -> None:
@@ -69,9 +60,6 @@ class AVLNode[T: Comparable](BSTNode[T]):
 
     @_callback_decorator
     def add(self, value: T) -> None:
-        if isinstance(self.value, EmptyValue):
-            self.value = value
-
         compare_result: Compare = self.predicate(self.value, value)
         if compare_result == Compare.Greater:
             if self.left:
@@ -91,7 +79,7 @@ class AVLNode[T: Comparable](BSTNode[T]):
             self.merge(other.left)
         if other.right is not None:
             self.merge(other.right)
-    
+
     def _update_parents(self):
         if self.right is not None:
             self.right.parent = self
@@ -115,7 +103,7 @@ class AVLNode[T: Comparable](BSTNode[T]):
         self.left, self.right = self.right, self.left
 
         self._update_parents()
-    
+
     def _rotate_right(self) -> None:
         self.value, self.right.value = self.right.value, self.value
 
@@ -123,9 +111,9 @@ class AVLNode[T: Comparable](BSTNode[T]):
             self.right.right, self.right.left, self.left
 
         self.left, self.right = self.right, self.left
-        
+
         self._update_parents()
-    
+
     def _get_height(self):
         mx_height = 0
         if self.left:
@@ -135,20 +123,43 @@ class AVLNode[T: Comparable](BSTNode[T]):
         return mx_height
 
     def _balance(self):
-        l_high = self.left._get_height() if self.left else -1
-        r_high = self.right._get_height() if self.right else -1
+        l_high = self.left._get_height()\
+            if self.left is not None\
+            else 0
+
+        r_high =\
+            self.right._get_height()\
+            if self.right is not None\
+            else 0
+
         if abs(r_high - l_high) <= 1:
             return
 
         if l_high > r_high:
-            l_r_high = self.left.right._get_height() if self.left and self.left.right else -1
-            l_l_high = self.left.left._get_height() if self.left and self.left.left else -1
+            l_r_high =\
+                self.left.right._get_height()\
+                if self.left is not None and self.left.right is not None\
+                else 0
+
+            l_l_high =\
+                self.left.left._get_height()\
+                if self.left is not None and self.left.left is not None\
+                else 0
+
             if l_r_high > l_l_high:
                 self.left._rotate_right()
             self._rotate_left()
         else:
-            r_l_high = self.right.left._get_height() if self.right and self.right.left else -1
-            r_r_high = self.right.right._get_height() if self.right and self.right.right else -1
+            r_l_high =\
+                self.right.left._get_height()\
+                if self.right is not None and self.right.left is not None\
+                else 0
+
+            r_r_high =\
+                self.right.right._get_height()\
+                if self.right is not None and self.right.right is not None\
+                else 0
+
             if r_l_high > r_r_high:
                 self.right._rotate_left()
             self._rotate_right()
@@ -173,57 +184,50 @@ class Tree[T]:
             Compare.Less
             if first < second
             else (Compare.Greater if first > second else Compare.Equal)
-        )
+            )
     ) -> None:
         self.predicate = predicate
         self.tree_type = tree_type
+
+    @staticmethod
+    def _print_tree(node, level=0, prefix="Root: "):
+        if node is not None:
+            return "    " * level + prefix + str(node.value) + "\n" +\
+                Tree._print_tree(node.left, level + 1, "L--> ") +\
+                Tree._print_tree(node.right, level + 1, "R--> ")
+        else:
+            return "    " * level + prefix + "None" + "\n"
+
+    def __str__(self):
+        return Tree._print_tree(self.root)
 
     def add(self, value) -> None:
         if self.root is None:
             self.root = self.tree_type(value, predicate=self.predicate)
         else:
             self.root.add(value)
-    
+
     def delete(self, value) -> None:
         if self.root is not None:
-            self.root.delete(value)
-    
+            if self.root.value == value and\
+                    self.root.right is None and\
+                    self.root.left is None:
+                self.root = None
+            else:
+                self.root.delete(value)
+        else:
+            raise KeyError("Tree is empty")
+
     def merge(self, other: Tree[T]) -> None:
         if other.root is not None:
             if self.root is not None:
                 self.root.merge(other.root)
             else:
                 self.root = deepcopy(other.root)
-    
+
     def search(self, value: T) -> Node[T]:
         if self.root is not None:
             return self.root.search(value)
-    
+
     def to_list(self) -> list[T]:
         return [] if self.root is None else self.root.to_list()
-
-
-a = Tree[int](AVLNode)
-for el in [3, 8, 11, 14, 16, 21, 23, 25]:
-    a.add(el)
-
-print(a.to_list())
-a.delete(8)
-nodes = a.to_list()
-for node_ind in nodes:
-    node = a.search(node_ind)
-    print(f"{node.parent.value if node.parent else 'No'} -> {node.value}. left: {node.left.value if node.left else 'No'}. right: {node.right.value if node.right else 'No'}")
-print(a.to_list())
-
-# tree = AVLNode(5)
-# for i in range(6, 10):
-#     tree.add(i)
-
-# for i in range(0, 5):
-#     tree.add(i)
-
-# print(tree.is_balanced())
-# tree.balance()
-# print(tree.is_balanced())
-
-# print(tree.to_list())

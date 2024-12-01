@@ -28,7 +28,8 @@ class Node[T](metaclass=ABCMeta):
     parent: Node[T] | None
 
     @abstractmethod
-    def __init__(self, parent: Node[T], preditcate: Callable[[T, T], bool]): ...
+    def __init__(self, parent: Node[T],
+                 preditcate: Callable[[T, T], bool]): ...
 
     @abstractmethod
     def add(self, other: T) -> None: ...
@@ -46,13 +47,8 @@ class Node[T](metaclass=ABCMeta):
     def search(self, other: Node) -> Node[T] | None: ...
 
 
-class EmptyValue:
-    def __init__(self):
-        ...
-
-
 class BSTNode[T: Comparable]:
-    value: T | EmptyValue
+    value: T
     left: BSTNode[T] | None
     right: BSTNode[T] | None
     parent: BSTNode[T] | None
@@ -60,7 +56,7 @@ class BSTNode[T: Comparable]:
 
     def __init__(
         self,
-        value: T | EmptyValue = EmptyValue(),
+        value: T,
         parent: BSTNode[T] | None = None,
         predicate: Callable[[T, T], Compare] = lambda first, second: (
             Compare.Less
@@ -88,9 +84,6 @@ class BSTNode[T: Comparable]:
         return True
 
     def search(self, x: T) -> BSTNode | None:
-        if isinstance(self.value, EmptyValue):
-            return None
-
         if self.predicate(self.value, x) == Compare.Equal:
             return self
 
@@ -100,9 +93,6 @@ class BSTNode[T: Comparable]:
             return self.right.search(x) if self.right else None
 
     def delete(self, value: T) -> None:
-        if isinstance(self.value, EmptyValue):
-            return
-
         if self.predicate(self.value, value) == Compare.Greater:
             if self.left is not None:
                 if self.predicate(self.left.value, value) == Compare.Equal:
@@ -116,7 +106,7 @@ class BSTNode[T: Comparable]:
 
                     elif self.left.right is not None:
                         self.left.right.parent = self
-                        self.right = self.left.right
+                        self.left = self.left.right
                     else:
                         self.left = None
                 else:
@@ -165,13 +155,8 @@ class BSTNode[T: Comparable]:
 
                 self.value = self.right.value
                 self.right = self.right.right
-            else:
-                self.value = EmptyValue()
 
     def add(self, value: T) -> None:
-        if isinstance(self.value, EmptyValue):
-            self.value = value
-
         if self.predicate(self.value, value) == Compare.Greater:
             if self.left:
                 self.left.add(value)
