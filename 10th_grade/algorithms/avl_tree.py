@@ -24,12 +24,14 @@ class AVLNode[T: Comparable](BSTNode[T]):
         return super().correct() and self._is_balanced()
 
     def _is_balanced(self):
-        l_high = self.left._get_height() if self.left else 0
-        r_high = self.right._get_height() if self.right else 0
+        l_high = self.left._get_height() + 1 if self.left else 0
+        r_high = self.right._get_height() + 1 if self.right else 0
         if abs(l_high - r_high) > 1:
             return False
+
         if self.left is not None and not self.left._is_balanced():
             return False
+
         if self.right is not None and not self.right._is_balanced():
             return False
         return True
@@ -113,12 +115,12 @@ class AVLNode[T: Comparable](BSTNode[T]):
         return mx_height
 
     def _balance(self):
-        l_high = self.left._get_height()\
+        l_high = self.left._get_height() + 1\
             if self.left is not None\
             else 0
 
         r_high =\
-            self.right._get_height()\
+            self.right._get_height() + 1\
             if self.right is not None\
             else 0
 
@@ -127,12 +129,12 @@ class AVLNode[T: Comparable](BSTNode[T]):
 
         if l_high > r_high:
             l_r_high =\
-                self.left.right._get_height()\
+                self.left.right._get_height() + 1\
                 if self.left is not None and self.left.right is not None\
                 else 0
 
             l_l_high =\
-                self.left.left._get_height()\
+                self.left.left._get_height() + 1\
                 if self.left is not None and self.left.left is not None\
                 else 0
 
@@ -141,12 +143,12 @@ class AVLNode[T: Comparable](BSTNode[T]):
             self._rotate_left()
         else:
             r_l_high =\
-                self.right.left._get_height()\
+                self.right.left._get_height() + 1\
                 if self.right is not None and self.right.left is not None\
                 else 0
 
             r_r_high =\
-                self.right.right._get_height()\
+                self.right.right._get_height() + 1\
                 if self.right is not None and self.right.right is not None\
                 else 0
 
@@ -187,7 +189,7 @@ class Tree[T]:
                 Tree._print_tree(node.right, level + 1, "R--> ")
         else:
             return "    " * level + prefix + "None" + "\n"
-    
+
     def __str__(self):
         return Tree._print_tree(self.root)
 
