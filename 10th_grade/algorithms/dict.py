@@ -3,7 +3,7 @@ from typing import Callable, Iterable
 
 
 class Dict[K, V](Tree[tuple[K, V]]):
-    def __init__(self, collection: Iterable[tuple[K, V]]):
+    def __init__(self, collection: Iterable[tuple[K, V]] = []):
         predicate: Callable[[tuple[K, V], tuple[K, V]], Compare] =\
             lambda first, second: (
             Compare.Less
