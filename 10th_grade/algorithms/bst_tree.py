@@ -32,6 +32,9 @@ class Node[T](metaclass=ABCMeta):
                  preditcate: Callable[[T, T], bool]): ...
 
     @abstractmethod
+    def correct(self, other: T) -> None: ...
+
+    @abstractmethod
     def add(self, other: T) -> None: ...
 
     @abstractmethod

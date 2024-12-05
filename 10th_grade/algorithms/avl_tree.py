@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable
+from typing import Callable, Any
 from copy import deepcopy
 
 from bst_tree import BSTNode, Comparable, Compare, Node
@@ -21,31 +21,21 @@ class AVLNode[T: Comparable](BSTNode[T]):
         super().__init__(value, parent, predicate)
 
     def correct(self) -> bool:
-        if self.left is not None:
-            if self.predicate(self.left.value, self.value) != Compare.Less:
-                return False
-            if not self.left.correct():
-                return False
-        if self.right is not None:
-            if self.predicate(self.right.value, self.value) != Compare.Greater:
-                return False
-            if not self.right.correct():
-                return False
-        return True
+        return super().correct() and self._is_balanced()
 
-    def is_balanced(self):
+    def _is_balanced(self):
         l_high = self.left._get_height() if self.left else 0
         r_high = self.right._get_height() if self.right else 0
         if abs(l_high - r_high) > 1:
             return False
-        if self.left is not None and not self.left.is_balanced():
+        if self.left is not None and not self.left._is_balanced():
             return False
-        if self.right is not None and not self.right.is_balanced():
+        if self.right is not None and not self.right._is_balanced():
             return False
         return True
 
-    def _callback_decorator(func):
-        def wrapper(self: AVLNode, *args, **kwargs):
+    def _callback_decorator(func) -> Callable:
+        def wrapper(self: AVLNode, *args, **kwargs) -> Any:
             result = func(self, *args, **kwargs)
             self.balance()
             return result
@@ -197,9 +187,12 @@ class Tree[T]:
                 Tree._print_tree(node.right, level + 1, "R--> ")
         else:
             return "    " * level + prefix + "None" + "\n"
-
+    
     def __str__(self):
         return Tree._print_tree(self.root)
+
+    def correct(self) -> bool:
+        return self.root is None or self.root.correct()
 
     def add(self, value) -> None:
         if self.root is None:

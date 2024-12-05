@@ -1,7 +1,9 @@
 from avl_tree import Tree, AVLNode
 from random import sample, randint
-from time import time as now
+from typing import Generator
 
+
+AMOUNT_TESTS = 6
 
 def gen_test(size=0):
     tree = Tree[int](AVLNode)
@@ -27,16 +29,6 @@ def gen_test(size=0):
     return tree
 
 
-n = 10
-
-for i in range(6):
-    print("Test level:", i)
-    start_time = now()
-
-    for _ in range(n):
-        tree = gen_test(i)
-        print(tree.root.correct() and tree.root.is_balanced())
-
-    runtime = (now() - start_time) / n
-    print(round(runtime, 5))
-    print("-" * 12)
+def gen_tests() -> Generator[Tree, None, None]:
+    for lvl in range(AMOUNT_TESTS):
+        yield gen_test(lvl)
