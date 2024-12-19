@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Any, Generator
-from copy import deepcopy
+from typing import Generator
 import itertools
 
 from avl_dict import Dict
@@ -58,7 +57,7 @@ class TrieNode:
         suffix = full_key[len(longest_common_prefix):]
         remaining_string = string[len(longest_common_prefix):]
 
-        new_node.nodes[suffix] = deepcopy(self.nodes[full_key])
+        new_node.nodes[suffix] = self.nodes[full_key]
 
         new_node.add(remaining_string)
 
@@ -81,22 +80,15 @@ class TrieNode:
 
         raise "No such string"
 
-    def _get_longest_common_prefix(self) -> tuple[str, TrieNode]:
-        nodes = self.nodes.to_list()
-        if len(nodes) == 1 and nodes[0][0] != END_CHAR:
-            longest_prefix, node = nodes[0][1]._get_longest_common_prefix()
-            return nodes[0][0] + longest_prefix, node
-        else:
-            return "", self
-
     def __contains__(self, string: str) -> bool:
         if len(string) == 0:
             return END_CHAR in self.nodes
 
-        cur_char = string[0]
-        return\
-            False if self.nodes[cur_char] is None\
-            else string[1:] in self.nodes[cur_char]
+        for key, subtrie in self.nodes.to_list():
+            if string.startswith(key):
+                return string[len(key):] in subtrie
+
+        return False
 
     def _get_strings(self) -> Generator[str, None, None]:
         nodes = self.nodes.to_list()
@@ -110,14 +102,3 @@ class TrieNode:
     def __str__(self):
         strings = self._get_strings()
         return '\n'.join(strings)
-
-
-t = TrieNode()
-t.add("aaa")
-t.add("aaab")
-t.add("aaac")
-t.add("aaae")
-t.add("aabb")
-t.remove("aaa")
-t.remove("aabb")
-print(t)
