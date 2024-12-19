@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Generator
+from typing import Generator, Iterable
 import itertools
 
 from avl_dict import Dict
@@ -21,8 +21,10 @@ END_CHAR = '\0'
 class TrieNode:
     nodes: Dict[str, TrieNode | None]
 
-    def __init__(self) -> None:
+    def __init__(self, collection: Iterable[str] = []) -> None:
         self.nodes = Dict[str, TrieNode]()
+        for string in collection:
+            self.add(string)
 
     def add(self, string: str) -> None:
         if len(string) == 0:
@@ -98,6 +100,9 @@ class TrieNode:
             else:
                 for substr in subtrie._get_strings():
                     yield char + substr
+
+    def __iter__(self):
+        return self._get_strings()
 
     def __str__(self):
         strings = self._get_strings()
