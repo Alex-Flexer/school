@@ -203,13 +203,14 @@ class Tree[T]:
             self.root.add(value)
 
     def delete(self, value) -> None:
+        deletion_node = (value,)
         if self.root is not None:
-            if self.predicate(self.root.value, value) == Compare.Equal and\
+            if self.predicate(self.root.value, deletion_node) == Compare.Equal and\
                     self.root.right is None and\
                     self.root.left is None:
                 self.root = None
             else:
-                self.root.delete(value)
+                self.root.delete(deletion_node)
         else:
             raise KeyError("Tree is empty")
 
