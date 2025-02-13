@@ -10,7 +10,7 @@ class Database:
 
     class Books:
         """
-        Class implementing task table logic
+        Class implementing books table logic
         """
 
         conn: sqlite3.Connection
@@ -25,7 +25,7 @@ class Database:
             self.conn.commit()
             return res.fetchall()
 
-        def all(self) -> list[tuple[str, str, bool]]:
+        def all(self) -> list[tuple[str]]:
             return self._template_query("all.sql")
 
         def add(self, *book_details) -> None:
@@ -34,22 +34,25 @@ class Database:
             """
             self._template_query("add.sql", *book_details)
 
-        def delete(self, id: int) -> None:
-            self._template_query("delete.sql", id)
-
         def search(self, pattern: str) -> list[tuple[int, str, str, bool]]:
             return self._template_query("search.sql", pattern, pattern)
 
         def borrow(self, book_id: int, user_id) -> None:
             self._template_query("borrow.sql", book_id, user_id)
+
+        def check_book_exists(self, book_id) -> bool:
+            return len(self._template_query("get.sql", book_id)) > 0
         
-        def take_back(self, book_id: int, user_id: int) -> None:
+        def check_book_is_free(self, book_id) -> bool:
+            return len(self._template_query("get_borrower_book_conn.sql"), book_id) == 0
+        
+        def take_back(self, book_id: int) -> None:
             self._template_query("take_back.sql", book_id, user_id)
 
         
     class Users:
         """
-        Class implementing task table logic
+        Class implementing users table logic
         """
 
         conn: sqlite3.Connection
@@ -63,6 +66,9 @@ class Database:
             res = cursor.execute(script, args)
             self.conn.commit()
             return res.fetchall()
+        
+        def all(self) -> list[tuple[str]]:
+            return self._template_query("all.sql")
 
         def create(self, *user_details) -> None:
             """
@@ -73,8 +79,14 @@ class Database:
         def delete(self, id: int) -> None:
             self._template_query("delete.sql", id)
 
-        def search(self, pattern: str) -> list[tuple[int, str, str, bool]]:
-            return self._template_query("search.sql", pattern, pattern)
+        def search(self, license_id: str) -> list[tuple[int, str, str, bool]]:
+            return self._template_query("search.sql", license_id)
+        
+        def relocate(self, user_id, new_address: str) -> None:
+            self._template_query("relocate.sql", new_address, user_id)
+        
+        def get_borrowed_books(self, user_id) -> list[tuple[str]]:
+            return self._template_query("get_borrowed_books.sql", user_id)
     
     conn : sqlite3.Connection
     books: Books

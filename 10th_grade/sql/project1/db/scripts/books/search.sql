@@ -1,3 +1,3 @@
 SELECT * 
-FROM task
+FROM books
 WHERE (name LIKE '%' || ? || '%') OR (author LIKE '%' || ? || '%');
