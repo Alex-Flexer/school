@@ -1,4 +1,4 @@
-INSERT INTO books (
+INSERT INTO users (
     name,
     surname,
     patronymic,

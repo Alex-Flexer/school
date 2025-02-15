@@ -5,7 +5,8 @@ CREATE TABLE IF NOT EXISTS books (
     publication_year INTEGER,
     edition TEXT,
     wardrobe_id INTEGER,
-    shelf_id INTEGER
+    shelf_id INTEGER,
+    UNIQUE (wardrobe_id, shelf_id)
 );
 
 CREATE TABLE IF NOT EXISTS debtors (

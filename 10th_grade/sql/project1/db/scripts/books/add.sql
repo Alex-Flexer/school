@@ -5,4 +5,4 @@ INSERT INTO books (
     edition,
     wardrobe_id,
     shelf_id
-) VALUES (?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?);
