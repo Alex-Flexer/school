@@ -77,7 +77,10 @@ class Database:
             """
             Method provides checking emptiness 
             """
-            books = self._template_query("books_in_certain_place.sql", shelf_id, wardrobe_id)
+            books = self._template_query(
+                "books_in_certain_place.sql",
+                shelf_id, wardrobe_id
+            )
             return len(books) == 0
 
         def move(self,
@@ -85,16 +88,13 @@ class Database:
                  shelf_id: str,
                  new_wardrobe_id: str,
                  new_shelf_id: str
-            ) -> None:
+                 ) -> None:
             """
             Method provides moving a book
             """
             return self._template_query(
                 "move.sql",
-                new_wardrobe_id,
-                new_shelf_id,
-                wardrobe_id,
-                shelf_id
+                new_wardrobe_id, new_shelf_id, wardrobe_id, shelf_id
             )
 
     class Users:

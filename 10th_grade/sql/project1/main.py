@@ -1,23 +1,35 @@
 """Module provides beautiful printing tables"""
-from tabulate import tabulate
 import os
+import difflib
+from tabulate import tabulate
 from db.models import Database
 
 
 cache = {}
+COMMANDS = [
+    "all", "a", "all-free", "af", "quit",
+    "find-user", "fu", "search", "find", "exit",
+    "s", "f", "my", "help", "h", "sign-in", "q",
+    "si", "sign-up", "su", "delete", "del", "d",
+    "delete-user", "del-user", "du", "borrow",
+    "br", "take-back", "tb", "relocate", "rl",
+    "move", "mv", "add", "create", "cr", "remove", "rm"
+]
 
 
 def welcome():
     """
-    Function print welcome 
+    Function print welcome
     """
-    print("Welcome to Flexer-Lib-System!\n\n")
+    print("Welcome to Flexer-Lib-System!\n"
+          "To get instruction use \"help\" (h)\n\n")
+
 
 def pprint(*args, **kwargs):
     """
     Function provides printing with clearing
     """
-    os.system("clear")
+    os.system("cls")
     print(*args, **kwargs)
 
 
@@ -49,7 +61,7 @@ def main():
     welcome()
 
     while user_input := input(">>> "):
-        pprint()
+        pprint(end="")
         cmd = user_input
         match cmd:
             case "sign-up" | "su":
@@ -58,16 +70,26 @@ def main():
                 if not acceptation:
                     continue
 
-                name = input("Your name: ")
-                surname = input("Your surname: ")
+                name = input("User's name: ")
+                surname = input("User's surname: ")
                 patronymic = input(
-                    "Your patronymic (in the absence, just click on enter): ")
+                    "User's patronymic (optional): ")
                 patronymic = patronymic if patronymic else None
-                license_id = input("Your license-id: ")
-                address = input("And finally your address: ")
+                license_id = input("User's license-id: ")
+                address = input("And finally user's address (optional): ")
                 if len(db.users.search(license_id)) == 0:
-                    db.users.create(name, surname, patronymic,
-                                    license_id, address)
+                    try:
+                        db.users.create(
+                            name,
+                            surname,
+                            patronymic,
+                            license_id,
+                            address
+                        )
+                    except Exception as e:
+                        pprint(f"ERROR: {e}")
+                    else:
+                        pprint("Users is successfully created.")
                 else:
                     pprint("User with this license-id already exists.")
 
@@ -83,6 +105,29 @@ def main():
                 else:
                     user = found_users[0]
                     cache["user"] = user
+                    pprint(
+                        "You are successfully signed in."
+                        f"Your current license-id: {license_id}"
+                    )
+
+            case "my":
+                is_signed_in = check_signed_in()
+                if not is_signed_in:
+                    pprint("Firstly sign in (user command si).")
+                    continue
+
+                user_id = user[0]
+                books = db.users.get_borrowed_books(user_id)
+                if len(books) == 0:
+                    pprint("You have not borrowed any books yet.")
+                else:
+                    pprint("Books borrowed by user:")
+                    print(tabulate(
+                        books,
+                        headers=['Id', 'Name', 'Author',
+                                 'Edition', 'Pub. year'],
+                        tablefmt='rounded_grid')
+                    )
 
             case "relocate" | "rl":
                 is_signed_in = check_signed_in()
@@ -98,16 +143,26 @@ def main():
                 new_address = input("Your new address: ")
                 user_id = cache["user"][0]
                 old_address = cache["user"][5]
-                db.users.relocate(user_id, new_address)
-                cache[5] = new_address
-
-                pprint(
-                    f"Address successfully updated: {old_address} ⟶ {new_address}.")
+                try:
+                    db.users.relocate(user_id, new_address)
+                except Exception as e:
+                    pprint(f"ERROR: {e}")
+                else:
+                    cache[5] = new_address
+                    pprint(
+                        "Address successfully updated:"
+                        f"{old_address} ⟶ {new_address}."
+                    )
 
             case "del-user" | "delete-user" | "del-u" | "du":
                 license_id = input("User's license-id: ")
                 if len(db.users.search(license_id)) > 0:
-                    db.users.delete(license_id)
+                    try:
+                        db.users.delete(license_id)
+                    except Exception as e:
+                        pprint(f"ERROR: {e}")
+                    else:
+                        pprint("User is successfully deleted.")
                 else:
                     pprint("There is no user with this license-id.")
 
@@ -125,7 +180,12 @@ def main():
                     )
             case "fu" | "find-user":
                 license_id = input("Users's license-id: ")
-                print(db.users.search(license_id))
+                pprint(db.users.search(license_id),)
+                pprint(tabulate(
+                    db.users.search(license_id),
+                    headers=['Name', 'Surname', 'Patronymic', "License-id", 'Address'],
+                    tablefmt='rounded_grid')
+                )
 
             case "borrow" | "br":
                 is_signed_in = check_signed_in()
@@ -147,8 +207,12 @@ def main():
                     pprint("Book by this id has already been borrowed.")
                 else:
                     user_id = cache["user"][0]
-                    db.books.borrow(book_id, user_id)
-                    pprint("Book is successfully borrowed.")
+                    try:
+                        db.books.borrow(book_id, user_id)
+                    except Exception as e:
+                        pprint(f"ERROR: {e}")
+                    else:
+                        pprint("Book is successfully borrowed.")
 
             case "take-back" | "return" | "rt" | "tb":
                 is_signed_in = check_signed_in()
@@ -165,7 +229,7 @@ def main():
                 if len(books) == 0:
                     pprint("You have not borrowed any books.")
                     continue
-                
+
                 pprint("Books borrowed by you:")
                 print(tabulate(books, headers=[
                       'Id', 'Name', 'Author', 'Edition', 'Pub. year'], tablefmt='rounded_grid'))
@@ -176,8 +240,12 @@ def main():
                 if int(book_id) not in book_id_list:
                     pprint(f"There is no book by id \"{book_id}\".")
                 else:
-                    db.books.take_back(book_id)
-                    pprint("Book is successfully taken back.")
+                    try:
+                        db.books.take_back(book_id)
+                    except Exception as e:
+                        pprint(f"ERROR: {e}")
+                    else:
+                        pprint("Book is successfully taken back.")
 
             case "add" | "create" | "cr":
                 name = input("Name of new book: ")
@@ -193,8 +261,17 @@ def main():
                 while not (shelf_id := input("Shelf's index: ")).isdecimal():
                     print("Shelf index must be integer, try again.")
 
-                db.books.add(name, author, pub_year,
-                             edition, wardrobe_id, shelf_id)
+                if not db.books.check_place_free(wardrobe_id, shelf_id):
+                    pprint("This place is busy.")
+                else:
+                    db.books.add(
+                        name,
+                        author,
+                        pub_year,
+                        edition,
+                        wardrobe_id,
+                        shelf_id
+                    )
 
             case "delete" | "del" | "d" | "remove" | "rm":
                 book_id = input("Book-id: ")
@@ -223,8 +300,17 @@ def main():
                 if not db.books.check_place_free(new_wardrobe_id, new_shelf_id):
                     pprint("This place is busy.")
                 else:
-                    db.books.move(wardrobe_id, shelf_id,
-                                  new_wardrobe_id, new_shelf_id)
+                    try:
+                        db.books.move(
+                            wardrobe_id,
+                            shelf_id,
+                            new_wardrobe_id,
+                            new_shelf_id
+                        )
+                    except Exception as e:
+                        pprint(f"ERROR: {e}")
+                    else:
+                        pprint("Position of book is successfully changed.")
 
             case "all" | "a":
                 books = db.books.all()
@@ -243,11 +329,33 @@ def main():
                     tablefmt='rounded_grid')
                 )
 
+            case "help" | "h":
+                print(
+                    "Instruction:\n\n\n"
+                    "all (a) - get all books\n\n"
+                    "all-free (af) - get all free books\n\n"
+                    "search/find (s/f) - find a book by pattern\n\n"
+                    "add/create (cr) - add the book to database\n\n"
+                    "delete/remove (del/rm) - remove book from database\n\n"
+                    "move (mv) - change position of the book\n\n"
+                    "sign-up (su) - create an account of user\n\n"
+                    "sign-in (si) - sign in the user's account\n\n"
+                    "find-user (fu) - find user by license-id\n\n"
+                    "delete-user (du) - delete user by license-id\n\n"
+                    "borrow (br) - borrow a book for user\n\n"
+                    "take-back (tb) - take back a book\n\n"
+                    "relocate (rl) - change an address of user\n\n"
+                    "help (h) - get help manual"
+                )
+
             case "quit" | "q" | "exit":
                 break
 
             case _:
-                raise ValueError("invalid command-line argument")
+                sim_cmd = difflib.get_close_matches(cmd, COMMANDS)
+                pprint(f"Unknown command \"{cmd}\".")
+                if len(sim_cmd) > 0:
+                    print("Probably you meant:", ", ".join(sim_cmd))
 
 
 if __name__ == "__main__":

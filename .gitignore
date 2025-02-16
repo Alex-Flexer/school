@@ -4,6 +4,7 @@ __pycache__/
 *$py.class
 *.zip
 test.py
+lib.db
 # C extensions
 *.so
 
