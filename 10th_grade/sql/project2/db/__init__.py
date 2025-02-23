@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from db.models import Base, Task, Profile, Profile, User
 
 
-DB_URL = "sqlite:///tasks.db"
+DB_URL = "sqlite:///project_tracker.db"
 
 engine = create_engine(DB_URL)
 Base.metadata.create_all(engine)

@@ -5,6 +5,7 @@ __pycache__/
 *.zip
 test.py
 lib.db
+project_tracker.db
 # C extensions
 *.so
 
