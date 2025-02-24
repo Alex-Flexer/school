@@ -4,14 +4,14 @@ import difflib
 from platform import platform
 import re
 
-from sqlalchemy import or_
+from sqlalchemy import or_, Table
 from sqlalchemy.orm.session import Session as SessionType
 from tabulate import tabulate
 
 from db import Session
-from db.models import Task, Profile, Project, User, association_table
+from db.models import Task, Profile, Project, User, association_table, Status
 
-TableType = Task | Profile | Project | User
+TableType = Task | Profile | Project | User | Status | Table
 
 
 COMMANDS = [
@@ -28,7 +28,8 @@ COMMANDS = [
     "search-project", "sp", "find-project", "fp",
     "project-tasks", "pt", "project-users", "pu",
     "unassign-user", "unasu", "user-projects", "upj",
-    "quit", "q", "exit", "ex"
+    "quit", "q", "exit", "ex", "all-users", "all-tasks",
+    "all-projects", "alu", "alt", "alp"
 ]
 
 assert len(set(COMMANDS)) == len(COMMANDS)
@@ -110,7 +111,7 @@ def main():
                     print("Task with this title already exists.")
                     continue
 
-                task_description = input("Task's description: ")
+                task_description = input("Task's description (optional): ")
 
                 if not task_description:
                     task_description = None
@@ -119,10 +120,12 @@ def main():
                     print("Project-id must be integer, try again.")
 
                 if check_entry_exists_by_id(session, Project, int(project_id)):
+                    status_id = session.query(Status).filter_by(
+                        status='N').scalar().id
                     session.add(Task(
                         title=task_title,
                         description=task_description,
-                        status="N",
+                        status_id=status_id,
                         project_id=int(project_id)
                     ))
                     print("Task is successfully created.")
@@ -135,7 +138,7 @@ def main():
                 if check_entry_exists(session, Project, title=project_title):
                     print("Project with this title already exists.")
                 else:
-                    project_description = input("Project's description: ")
+                    project_description = input("Project's description (optional): ")
 
                     if not project_description:
                         project_description = None
@@ -264,8 +267,14 @@ def main():
                 task = session.get(Task, int(task_id))
 
                 if task is not None:
-                    task.status = input("Task's status: ")
-                    print("Status is successfully updated.")
+                    task_status = input("Task's status: ")
+                    new_status = session.query(Status).filter_by(
+                        status=task_status).scalar()
+                    if new_status is not None:
+                        task.status_id = new_status.id
+                        print("Status is successfully updated.")
+                    else:
+                        print("Unknown status.")
                 else:
                     print("Task is not defined.")
 
@@ -276,7 +285,7 @@ def main():
                 project = session.get(Project, int(project_id))
 
                 if project is not None:
-                    project.description = input("New project's description: ")
+                    project.description = input("New project's description (optional): ")
                 else:
                     print("Project is not defined.")
 
@@ -361,7 +370,8 @@ def main():
                                 (association_table.c.project_id == project_id)
                             )
                             session.execute(assoc_deletion)
-                            print("User is successfully unassigned from this project.")
+                            print(
+                                "User is successfully unassigned from this project.")
                         else:
                             print("This project is not assigned to this user.")
                     else:
@@ -371,17 +381,30 @@ def main():
 
             case "search-user" | "su" | "find-user" | "fu":
                 pattern = input("Your request: ")
-                found = session.query(Profile).filter(
+                found_profiles = session.query(Profile).filter(
                     or_(
-                        User.username.like(f"%{pattern}%"),
-                        User.email.like(f"%{pattern}%"),
                         Profile.bio.like(f"%{pattern}%"),
                         Profile.phone.like(f"%{pattern}%")
                     )
                 ).all()
+
+                found_users = session.query(User).filter(
+                    or_(
+                        User.username.like(f"%{pattern}%"),
+                        User.email.like(f"%{pattern}%")
+                    )
+                ).all()
+
+                found_users = set(
+                    found_users +
+                    [profile.user for profile in found_profiles]
+                )
+                table = [(user.id, user.username,
+                          user.email, user.profile.phone)
+                         for user in found_users]
+
                 print(tabulate(
-                    [(profile.id, profile.user.username, profile.user.email, profile.phone)
-                     for profile in found],
+                    table,
                     headers=['Id', 'Username', 'Email', 'Phone'],
                     tablefmt='rounded_grid')
                 )
@@ -395,7 +418,7 @@ def main():
                     )
                 ).all()
                 print(tabulate(
-                    [(task.id, task.title, task.project_id, task.status)
+                    [(task.id, task.title, task.project_id, task.status.status)
                      for task in found],
                     headers=['Id', 'Title', 'Project-ID', 'Status'],
                     tablefmt='rounded_grid')
@@ -424,7 +447,7 @@ def main():
                 if project is not None:
                     tasks = project.tasks
                     print(tabulate(
-                        [(task.id, task.title, task.project_id, task.status)
+                        [(task.id, task.title, task.project_id, task.status.status)
                          for task in tasks],
                         headers=['Id', 'Title', 'Project-ID', 'Status'],
                         tablefmt='rounded_grid')
@@ -462,11 +485,39 @@ def main():
                 else:
                     print("Project is not defined.")
 
+            case "all-users" | "alu":
+                users = [(user.id, user.username, user.email, user.profile.phone)
+                         for user in session.query(User).all()]
+                print(tabulate(
+                    users,
+                    headers=['Id', 'Username', 'Email', 'Phone'],
+                    tablefmt='rounded_grid')
+                )
+
+            case "all-tasks" | "alt":
+                tasks = [(task.id, task.title, task.project_id, task.status.status)
+                         for task in session.query(Task).all()]
+                print(tabulate(
+                    tasks,
+                    headers=['Id', 'Title', 'Project-ID', 'Status'],
+                    tablefmt='rounded_grid')
+                )
+
+            case "all-projects" | "alp":
+                projects = [(project.id, project.title)
+                         for project in session.query(Project).all()]
+                print(tabulate(
+                    projects,
+                    headers=['Id', 'Title'],
+                    tablefmt='rounded_grid')
+                )
+
             case "quit" | "q" | "exit" | "ex":
                 break
 
             case _:
-                sim_cmd = difflib.get_close_matches(cmd, COMMANDS, cutoff=0.75, n=3)
+                sim_cmd = difflib.get_close_matches(
+                    cmd, COMMANDS, cutoff=0.75, n=3)
                 pprint(f"Unknown command \"{cmd}\".")
                 if len(sim_cmd) > 0:
                     print("Probably you meant:", ", ".join(sim_cmd))

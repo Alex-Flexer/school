@@ -88,12 +88,30 @@ class Task(Base):
     id = Column(Integer, primary_key=True)
     title = Column(String(255), unique=True, nullable=False)
     description = Column(String(255))
-    status = Column(String(255), nullable=False)
+
+    status_id = Column(Integer, ForeignKey("statuses.id"), nullable=False)
+    status = relationship("Status", backref="tasks", uselist=False)
+
     project_id = Column(Integer, ForeignKey("projects.id"), nullable=False)
     project = relationship("Project", backref="tasks", uselist=False)
 
     def __str__(self) -> str:
         return f"id: {self.id} | title: {self.title} | status: {self.status}"
+
+    def __rept__(self) -> str:
+        return str(self)
+
+
+class Status(Base):
+    """
+    Class represents statuses table
+    """
+    __tablename__ = "statuses"
+    id = Column(Integer, primary_key=True)
+    status = Column(String(3), unique=True, nullable=False)
+
+    def __str__(self) -> str:
+        return f"id: {self.id} | status: {self.status}"
 
     def __rept__(self) -> str:
         return str(self)
