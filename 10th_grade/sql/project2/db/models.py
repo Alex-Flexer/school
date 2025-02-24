@@ -1,23 +1,35 @@
+"""Module provides tables class"""
 from sqlalchemy.orm import declarative_base, relationship
 from sqlalchemy import (
-    Column, Integer,
-    String, ForeignKey, Table
+    Column, Integer, String,
+    ForeignKey, Table, UniqueConstraint
 )
 
 Base = declarative_base()
 
 association_table = Table(
     "association", Base.metadata,
-    Column("user_id", Integer, ForeignKey("profiles.id"), unique=True),
-    Column("project_id", Integer, ForeignKey("projects.id"), unique=True)
+    Column("user_id", Integer, ForeignKey("users.id")),
+    Column("project_id", Integer, ForeignKey("projects.id")),
+    UniqueConstraint("user_id", "project_id", name="unique_id_pairs")
 )
 
 
 class User(Base):
+    """
+    Class represents users table
+    """
     __tablename__ = "users"
     id = Column(Integer, primary_key=True)
     username = Column(String(255), nullable=False, unique=True)
     email = Column(String(255), nullable=False, unique=True)
+    profile = relationship("Profile", backref="user", uselist=False)
+
+    projects = relationship(
+        "Project",
+        secondary=association_table,
+        back_populates="users"
+    )
 
     def __str__(self) -> str:
         return f"id: {self.id} | username: {self.username} | email: {self.email}"
@@ -27,33 +39,36 @@ class User(Base):
 
 
 class Profile(Base):
+    """
+    Class represents profiles table
+    """
     __tablename__ = "profiles"
     id = Column(Integer, primary_key=True)
-    bio = Column(String(255), nullable=False, unique=True)
+    bio = Column(String(255), nullable=False)
     phone = Column(String(255), nullable=False, unique=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
-    user = relationship("User", backref="profile", uselist=False)
-
-    projects = relationship(
-        "Project",
-        secondary=association_table,
-        back_populates="users"
-    )
+    user_id = Column(Integer, ForeignKey("users.id"),
+                     nullable=False, unique=True)
 
     def __str__(self) -> str:
-        return f"id: {self.user.id} | username: {self.user.username} | email: {self.user.email} | phone: {self.phone}"
+        return f"id: {self.user.id} | "\
+               f"username: {self.user.username} | "\
+               f"email: {self.user.email} | "\
+               f"phone: {self.phone}"
 
     def __repr__(self) -> str:
         return str(self)
 
 
 class Project(Base):
+    """
+    Class represents projects table
+    """
     __tablename__ = "projects"
     id = Column(Integer, primary_key=True)
     title = Column(String(255), unique=True, nullable=False)
     description = Column(String(255))
     users = relationship(
-        "Profile",
+        "User",
         secondary=association_table,
         back_populates="projects"
     )
@@ -66,6 +81,9 @@ class Project(Base):
 
 
 class Task(Base):
+    """
+    Class represents tasks table
+    """
     __tablename__ = "tasks"
     id = Column(Integer, primary_key=True)
     title = Column(String(255), unique=True, nullable=False)

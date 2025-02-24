@@ -1,6 +1,7 @@
+"""Init-Module"""
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from db.models import Base, Task, Profile, Profile, User
+from db.models import Base
 
 
 DB_URL = "sqlite:///project_tracker.db"

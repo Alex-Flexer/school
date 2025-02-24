@@ -1,6 +1,8 @@
-"""Module provides beautiful printing tables"""
+"""Main file"""
 import os
 import difflib
+from platform import platform
+import re
 
 from sqlalchemy import or_
 from sqlalchemy.orm.session import Session as SessionType
@@ -9,49 +11,57 @@ from tabulate import tabulate
 from db import Session
 from db.models import Task, Profile, Project, User, association_table
 
+TableType = Task | Profile | Project | User
+
 
 COMMANDS = [
-    "add-user", "au", "add-task", "at",
+    "add-user", "ad", "add-task", "at",
     "add-project", "ap", "del-user", "du",
     "del-task", "dt", "del-project", "dp",
-    "upt-email", "ue", "upt-phone", "up",
-    "upt-bio", "ub", "upt-task-desc", "utd",
-    "upt-task-title", "utt", "upt-status", "us",
-    "upt-project-desc", "upd", "upt-project-title", "upt",
-    "reassign-task", "rt", "reassign-user", "ru",
+    "upd-email", "ue", "upd-phone", "up",
+    "upd-bio", "ub", "upd-task-desc", "utd",
+    "upd-task-title", "utt", "upd-status", "us",
+    "upd-project-desc", "upd", "upd-project-title", "upt",
+    "reassign-task", "rast", "assign-user", "asu",
     "search-user", "su", "find-user", "fu",
     "search-task", "st", "find-task", "ft",
     "search-project", "sp", "find-project", "fp",
     "project-tasks", "pt", "project-users", "pu",
-    "user-tasks", "ut", "quit", "q", "exit", "ex"
+    "unassign-user", "unasu", "user-projects", "upj",
+    "quit", "q", "exit", "ex"
 ]
+
+assert len(set(COMMANDS)) == len(COMMANDS)
+
+VALIDATE_PHONE_NUMBER_PATTERN =\
+    "^\\+?\\d{1,4}?[-.\\s]?\\(?\\d{1,3}?\\)?[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,9}$"
 
 
 def welcome():
-    """
-    Function print welcome
-    """
-    print("Welcome to Flexer-Lib-System!\n"
-          "To get instruction use \"help\" (h)\n\n")
+    """Function print welcome"""
+    print("Welcome to Flexer-Manager-System!\n"
+          "To get instruction use \"help\" (h)\n")
 
 
 def pprint(*args, **kwargs):
-    """
-    Function provides printing with clearing
-    """
-    os.system("cls")
+    """Function provides printing with clearing"""
+    os.system("cls" if "windows" in platform().lower() else "clear")
     print(*args, **kwargs)
 
 
-def get_acceptation(text: str) -> bool:
-    """
-    Function checks acceptation from user
-    """
-    acceptation = input(f"{text} [Y]es|[N]o: ")
-    if acceptation.lower() not in ("yes", "y", ""):
-        print("Operation was successfully canceled.")
-        return False
-    return True
+def check_entry_exists(session: SessionType, table: TableType, **kwargs) -> bool:
+    """Function checks the presence of a entry in the table"""
+    return session.query(table).filter_by(**kwargs).count() > 0
+
+
+def check_entry_exists_by_id(session: SessionType, table: TableType, id_: int) -> bool:
+    """Function checks the presence of a entry in the table by id"""
+    return session.get(table, id_) is not None
+
+
+def check_phone_number(phone_number: str) -> bool:
+    """Function checks correctness of phone number"""
+    return re.match(VALIDATE_PHONE_NUMBER_PATTERN, phone_number) is not None
 
 
 def main():
@@ -70,28 +80,33 @@ def main():
                 username = input("User's username: ")
                 email = input("User's email: ")
 
-                if session.query(User).filter_by(email=email).count() > 0:
+                if check_entry_exists(session, User, email=email):
                     print("User with this email already exists.")
-                elif session.query(User).filter_by(username=username).count() > 0:
+                elif check_entry_exists(session, User, username=username):
                     print("User with this username already exists.")
                 else:
                     bio = input("Profile's biography: ")
-                    phone = input("Profile's phone number: ")
-                    session.add(User(username=username, email=email))
-                    user = session.query(User).filter_by(
-                        username=username).scalar()
+                    while not check_phone_number(phone := input("Profile's phone number: ")):
+                        print("It does not look like a phone number, try again: ")
 
-                    session.add(Profile(
-                        bio=bio,
-                        phone=phone,
-                        user_id=user.id)
-                    )
-                    print("User is successfully created.")
+                    if not check_entry_exists(session, Profile, phone=phone):
+                        session.add(User(username=username, email=email))
+                        user = session.query(User).filter_by(
+                            username=username).scalar()
+
+                        session.add(Profile(
+                            bio=bio,
+                            phone=phone,
+                            user_id=user.id)
+                        )
+                        print("User is successfully created.")
+                    else:
+                        print("User with this phone number already exists.")
 
             case "add-task" | "at":
                 task_title = input("Task's title: ")
 
-                if session.query(Task).filter_by(title=task_title).count() > 0:
+                if check_entry_exists(session, Task, title=task_title):
                     print("Task with this title already exists.")
                     continue
 
@@ -100,13 +115,10 @@ def main():
                 if not task_description:
                     task_description = None
 
-                if session.query(Project).filter_by(title=task_title).count() > 0:
-                    print("Project with this title already exists.")
-
                 while not (project_id := input("Project's id: ")).isdecimal():
                     print("Project-id must be integer, try again.")
 
-                if session.get(Project, int(project_id)) is not None:
+                if check_entry_exists_by_id(session, Project, int(project_id)):
                     session.add(Task(
                         title=task_title,
                         description=task_description,
@@ -119,7 +131,8 @@ def main():
 
             case "add-project" | "ap":
                 project_title = input("Project's title: ")
-                if session.query(Project).filter_by(title=project_title).count() > 0:
+
+                if check_entry_exists(session, Project, title=project_title):
                     print("Project with this title already exists.")
                 else:
                     project_description = input("Project's description: ")
@@ -171,14 +184,14 @@ def main():
                 else:
                     print("Project is not defined.")
 
-            case "upt-email" | "ue":
+            case "upd-email" | "ue":
                 while not (user_id := input("User's id: ")).isdecimal():
                     print("User-id must be integer, try again.")
 
                 user = session.get(User, int(user_id))
                 if user is not None:
                     new_email = input("New user's email: ")
-                    if session.query(User).filter_by(email=new_email).count() > 0:
+                    if check_entry_exists(session, User, email=new_email):
                         print("User with this email already exists.")
                     else:
                         user.email = new_email
@@ -186,22 +199,24 @@ def main():
                 else:
                     print("User is not defined.")
 
-            case "upt-phone" | "up":
+            case "upd-phone" | "up":
                 while not (user_id := input("User's id: ")).isdecimal():
                     print("User-id must be integer, try again.")
 
                 user = session.get(Profile, int(user_id))
                 if user is not None:
-                    phone = input("New user's phone number: ")
-                    if session.query(Profile).filter_by(phone=phone).count() > 0:
-                        print("User with this phone number already exists.")
-                    else:
+                    while not check_phone_number(phone := input("New phone number: ")):
+                        print("It does not look like a phone number, try again: ")
+
+                    if not check_entry_exists(session, Profile, phone=phone):
                         user.phone = phone
                         print("Phone is successfully updated.")
+                    else:
+                        print("User with this phone number already exists.")
                 else:
                     print("User is not defined.")
 
-            case "upt-bio" | "ub":
+            case "upd-bio" | "ub":
                 while not (user_id := input("User's id: ")).isdecimal():
                     print("User-id must be integer, try again.")
 
@@ -213,7 +228,7 @@ def main():
                 else:
                     print("User is not defined.")
 
-            case "upt-task-desc" | "utd":
+            case "upd-task-desc" | "utd":
                 while not (task_id := input("Task's id: ")).isdecimal():
                     print("Task-id must be integer, try again.")
 
@@ -225,7 +240,7 @@ def main():
                 else:
                     print("Task is not defined.")
 
-            case "upt-task-title" | "utt":
+            case "upd-task-title" | "utt":
                 while not (task_id := input("Task's id: ")).isdecimal():
                     print("Task-id must be integer, try again.")
 
@@ -234,7 +249,7 @@ def main():
                 if task is not None:
                     task_title = input("New task's title: ")
 
-                    if session.query(Task).filter_by(title=task_title).count() > 0:
+                    if check_entry_exists(session, Task, title=task_title):
                         print("Task with this title already exists.")
                     else:
                         task.title = task_title
@@ -242,7 +257,7 @@ def main():
                 else:
                     print("Task is not defined.")
 
-            case "upt-status" | "us":
+            case "upd-status" | "us":
                 while not (task_id := input("Task's id: ")).isdecimal():
                     print("Task-id must be integer, try again.")
 
@@ -254,7 +269,7 @@ def main():
                 else:
                     print("Task is not defined.")
 
-            case "upt-project-desc" | "upd":
+            case "upd-project-desc" | "upd":
                 while not (project_id := input("Project's id: ")).isdecimal():
                     print("Project-id must be integer, try again.")
 
@@ -265,7 +280,7 @@ def main():
                 else:
                     print("Project is not defined.")
 
-            case "upt-project-title" | "upt":
+            case "upd-project-title" | "upt":
                 while not (project_id := input("Project's id: ")).isdecimal():
                     print("Project-id must be integer, try again.")
 
@@ -274,7 +289,7 @@ def main():
                 if project is not None:
                     project_title = input("New project's title: ")
 
-                    if session.query(Project).filter_by(title=project_title).count() > 0:
+                    if check_entry_exists(session, Project, title=project_title):
                         print("Task with this title already exists.")
                     else:
                         project.title = project_title
@@ -282,7 +297,7 @@ def main():
                 else:
                     print("Project is not defined.")
 
-            case "reassign-task" | "rt":
+            case "reassign-task" | "rast":
                 while not (task_id := input("Task's id: ")).isdecimal():
                     print("Task-id must be integer, try again.")
 
@@ -292,7 +307,7 @@ def main():
                     while not (project_id := input("Project's id: ")).isdecimal():
                         print("Project-id must be integer, try again.")
 
-                    if session.get(Project, int(project_id)) is not None:
+                    if check_entry_exists_by_id(session, Project, int(project_id)):
                         task.project_id = project_id
                         print("Task is successfully reassigned to another project.")
                     else:
@@ -300,19 +315,55 @@ def main():
                 else:
                     print("Task is not defined.")
 
-            case "reassign-user" | "ru":
+            case "assign-user" | "asu":
                 while not (user_id := input("User's id: ")).isdecimal():
                     print("User-id must be integer, try again.")
 
-                if session.get(User, int(user_id)) is not None:
+                if check_entry_exists_by_id(session, User, int(user_id)):
                     while not (project_id := input("Project's id: ")).isdecimal():
                         print("Project-id must be integer, try again.")
 
-                    if session.get(Project, int(project_id)) is not None:
-                        insert_stmt = association_table.insert().values(
-                            user_id=user_id, project_id=project_id)
-                        session.execute(insert_stmt)
-                        print("User is successfully reassigned to another project.")
+                    if check_entry_exists_by_id(session, Project, int(project_id)):
+                        if not check_entry_exists(
+                                session, association_table,
+                                project_id=project_id,
+                                user_id=user_id):
+
+                            insert_stmt = association_table.insert().values(
+                                user_id=user_id,
+                                project_id=project_id
+                            )
+                            session.execute(insert_stmt)
+                            print("User is successfully reassigned to this project.")
+                        else:
+                            print("This project is already assigned to this user.")
+                    else:
+                        print("Project is not defined.")
+                else:
+                    print("Task is not defined.")
+
+            case "unassign-user" | "unasu":
+                while not (user_id := input("User's id: ")).isdecimal():
+                    print("User-id must be integer, try again.")
+
+                if check_entry_exists_by_id(session, User, int(user_id)):
+                    while not (project_id := input("Project's id: ")).isdecimal():
+                        print("Project-id must be integer, try again.")
+
+                    if check_entry_exists_by_id(session, Project, int(project_id)):
+                        if check_entry_exists(
+                                session, association_table,
+                                project_id=project_id,
+                                user_id=user_id):
+
+                            assoc_deletion = association_table.delete().where(
+                                (association_table.c.user_id == user_id) &
+                                (association_table.c.project_id == project_id)
+                            )
+                            session.execute(assoc_deletion)
+                            print("User is successfully unassigned from this project.")
+                        else:
+                            print("This project is not assigned to this user.")
                     else:
                         print("Project is not defined.")
                 else:
@@ -389,23 +440,23 @@ def main():
                 if project is not None:
                     users = project.users
                     print(tabulate(
-                        [(user.id, user.user.username, user.user.email, user.phone)
+                        [(user.id, user.username, user.email, user.profile.phone)
                          for user in users],
                         headers=['Id', 'Username', 'Email', 'Phone'],
                         tablefmt='rounded_grid')
                     )
 
-            case "user-tasks" | "ut":
+            case "user-projects" | "upj":
                 while not (user_id := input("User's id: ")).isdecimal():
                     print("User-id must be integer, try again.")
 
-                user = session.get(Profile, int(user_id))
+                user = session.get(User, int(user_id))
                 if user is not None:
-                    tasks = user.tasks
+                    projects = user.projects
                     print(tabulate(
-                        [(task.id, task.title, task.project_id, task.status)
-                         for task in tasks],
-                        headers=['Id', 'Title', 'Project-ID', 'Status'],
+                        [(project.id, project.title)
+                         for project in projects],
+                        headers=['Id', 'Title'],
                         tablefmt='rounded_grid')
                     )
                 else:
@@ -415,7 +466,7 @@ def main():
                 break
 
             case _:
-                sim_cmd = difflib.get_close_matches(cmd, COMMANDS, cutoff=0.75)
+                sim_cmd = difflib.get_close_matches(cmd, COMMANDS, cutoff=0.75, n=3)
                 pprint(f"Unknown command \"{cmd}\".")
                 if len(sim_cmd) > 0:
                     print("Probably you meant:", ", ".join(sim_cmd))
