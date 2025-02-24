@@ -326,7 +326,7 @@ def main():
                             session.execute(insert_stmt)
                             print("User is successfully assigned to this project.")
                         else:
-                            print("This project is already assigned to this user.")
+                            print("This user is already assigned to this project.")
                     else:
                         print("Project is not defined.")
                 else:
