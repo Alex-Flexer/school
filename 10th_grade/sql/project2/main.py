@@ -133,10 +133,10 @@ def main():
                 while not (user_id := input("User's id: ")).isdecimal():
                     print("User-id must be integer, try again.")
 
-                profile = session.get(Profile, int(user_id))
-                if profile is not None:
-                    session.delete(profile)
-                    session.delete(profile.user)
+                user = session.get(User, int(user_id))
+                if user is not None:
+                    session.delete(user)
+                    session.delete(user.profile)
                     print("User is successfully deleted.")
                 else:
                     print("User is not defined.")
@@ -154,7 +154,7 @@ def main():
 
             case "del-project" | "dp":
                 while not (project_id := input("Project's id: ")).isdecimal():
-                    print("User-id must be integer, try again.")
+                    print("Project-id must be integer, try again.")
 
                 project = session.get(Project, int(project_id))
                 if project is not None:
@@ -191,11 +191,11 @@ def main():
                     while not check_phone_number(phone := input("New phone number: ")):
                         print("It does not look like a phone number, try again: ")
 
-                    if not check_entry_exists(session, Profile, phone=phone):
+                    if check_entry_exists(session, Profile, phone=phone):
+                        print("User with this phone number already exists.")
+                    else:
                         user.phone = phone
                         print("Phone is successfully updated.")
-                    else:
-                        print("User with this phone number already exists.")
                 else:
                     print("User is not defined.")
 
@@ -324,7 +324,7 @@ def main():
                                 project_id=project_id
                             )
                             session.execute(insert_stmt)
-                            print("User is successfully reassigned to this project.")
+                            print("User is successfully assigned to this project.")
                         else:
                             print("This project is already assigned to this user.")
                     else:
@@ -354,7 +354,7 @@ def main():
                             print(
                                 "User is successfully unassigned from this project.")
                         else:
-                            print("This project is not assigned to this user.")
+                            print("This user is not assigned to this project.")
                     else:
                         print("Project is not defined.")
                 else:
@@ -376,13 +376,13 @@ def main():
                     )
                 ).all()
 
-                found_users = set(
+                users = set(
                     found_users +
                     [profile.user for profile in found_profiles]
                 )
                 table = [(user.id, user.username,
                           user.email, user.profile.phone)
-                         for user in found_users]
+                         for user in users]
 
                 print(tabulate(
                     table,
@@ -466,7 +466,7 @@ def main():
                         tablefmt='rounded_grid')
                     )
                 else:
-                    print("Project is not defined.")
+                    print("User is not defined.")
 
             case "all-users" | "alu":
                 users = [(user.id, user.username, user.email, user.profile.phone)
