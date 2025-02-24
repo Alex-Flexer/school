@@ -32,7 +32,7 @@ COMMANDS = [
     "all-projects", "alu", "alt", "alp"
 ]
 
-assert len(set(COMMANDS)) == len(COMMANDS)
+assert len(set(COMMANDS)) == len(COMMANDS), "All commands should be unique."
 
 VALIDATE_PHONE_NUMBER_PATTERN =\
     "^\\+?\\d{1,4}?[-.\\s]?\\(?\\d{1,3}?\\)?[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,9}$"
@@ -468,6 +468,8 @@ def main():
                         headers=['Id', 'Username', 'Email', 'Phone'],
                         tablefmt='rounded_grid')
                     )
+                else:
+                    print("Project is not defined.")
 
             case "user-projects" | "upj":
                 while not (user_id := input("User's id: ")).isdecimal():
