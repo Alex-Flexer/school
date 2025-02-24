@@ -10,38 +10,19 @@ from tabulate import tabulate
 
 from db import Session
 from db.models import Task, Profile, Project, User, association_table, Status
+from config import (COMMANDS, HELP_DESCRIPTION,
+                    VALIDATE_PHONE_NUMBER_PATTERN, WELCOME_TEXT)
+
 
 TableType = Task | Profile | Project | User | Status | Table
 
 
-COMMANDS = [
-    "add-user", "ad", "add-task", "at",
-    "add-project", "ap", "del-user", "du",
-    "del-task", "dt", "del-project", "dp",
-    "upd-email", "ue", "upd-phone", "up",
-    "upd-bio", "ub", "upd-task-desc", "utd",
-    "upd-task-title", "utt", "upd-status", "us",
-    "upd-project-desc", "upd", "upd-project-title", "upt",
-    "reassign-task", "rast", "assign-user", "asu",
-    "search-user", "su", "find-user", "fu",
-    "search-task", "st", "find-task", "ft",
-    "search-project", "sp", "find-project", "fp",
-    "project-tasks", "pt", "project-users", "pu",
-    "unassign-user", "unasu", "user-projects", "upj",
-    "quit", "q", "exit", "ex", "all-users", "all-tasks",
-    "all-projects", "alu", "alt", "alp"
-]
-
 assert len(set(COMMANDS)) == len(COMMANDS), "All commands should be unique."
-
-VALIDATE_PHONE_NUMBER_PATTERN =\
-    "^\\+?\\d{1,4}?[-.\\s]?\\(?\\d{1,3}?\\)?[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,4}[-.\\s]?\\d{1,9}$"
 
 
 def welcome():
-    """Function print welcome"""
-    print("Welcome to Flexer-Manager-System!\n"
-          "To get instruction use \"help\" (h)\n")
+    """Function print welcoming text"""
+    pprint(WELCOME_TEXT)
 
 
 def pprint(*args, **kwargs):
@@ -66,9 +47,7 @@ def check_phone_number(phone_number: str) -> bool:
 
 
 def main():
-    """
-    Just main
-    """
+    """Just main"""
     session: SessionType = Session()
 
     welcome()
@@ -138,7 +117,8 @@ def main():
                 if check_entry_exists(session, Project, title=project_title):
                     print("Project with this title already exists.")
                 else:
-                    project_description = input("Project's description (optional): ")
+                    project_description = input(
+                        "Project's description (optional): ")
 
                     if not project_description:
                         project_description = None
@@ -285,7 +265,8 @@ def main():
                 project = session.get(Project, int(project_id))
 
                 if project is not None:
-                    project.description = input("New project's description (optional): ")
+                    project.description = input(
+                        "New project's description (optional): ")
                 else:
                     print("Project is not defined.")
 
@@ -507,7 +488,7 @@ def main():
 
             case "all-projects" | "alp":
                 projects = [(project.id, project.title)
-                         for project in session.query(Project).all()]
+                            for project in session.query(Project).all()]
                 print(tabulate(
                     projects,
                     headers=['Id', 'Title'],
@@ -516,6 +497,9 @@ def main():
 
             case "quit" | "q" | "exit" | "ex":
                 break
+
+            case "help" | "h":
+                pprint(HELP_DESCRIPTION)
 
             case _:
                 sim_cmd = difflib.get_close_matches(
