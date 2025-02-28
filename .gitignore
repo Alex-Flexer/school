@@ -6,6 +6,7 @@ __pycache__/
 test.py
 lib.db
 project_tracker.db
+calc_lines.py
 # C extensions
 *.so
 
