@@ -1,8 +1,9 @@
-PATTER_STRING_FIELD = """{a11}| {a12} | {a13}
+PATTER_STRING_FIELD =\
+    """{}| {} | {}
 --+--+--
-{a21}| {a22} |{a23}
+{}| {} |{}
 --+--+--
-{a31}| {a32} |{a33}"""
+{}| {} |{}"""
 
 
 class TicTacToeField:
@@ -21,15 +22,7 @@ class TicTacToeField:
                       1: "     x     ",
                       2: "     0    "}
         # https://www.youtube.com/watch?v=QSC_0LoFjxU ↓↓↓
-        return PATTER_STRING_FIELD.format(a11=print_data[self[0][0]],
-                                          a12=print_data[self[0][1]],
-                                          a13=print_data[self[0][2]],
-                                          a21=print_data[self[1][0]],
-                                          a22=print_data[self[1][1]],
-                                          a23=print_data[self[1][2]],
-                                          a31=print_data[self[2][0]],
-                                          a32=print_data[self[2][1]],
-                                          a33=print_data[self[2][2]])
+        PATTER_STRING_FIELD.format(*[print_data[self[i][j]] for j in range(3) for i in range(3)])
 
     def check_victory(self):
         # check horizontal
